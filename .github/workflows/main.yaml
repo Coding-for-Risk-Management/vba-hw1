@@ -1,0 +1,30 @@
+name: win_excel_com_test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-tests:
+    runs-on: windows-latest
+
+    steps:
+      - name: Install Office
+        run: choco install office365business
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: List files after checkout
+        run: |
+          powershell -Command "Get-ChildItem -Recurse | Select-Object -ExpandProperty FullName"
+
+      - name: Change directory to PowerShell directory
+        run: |
+          cd ${{ github.workspace }}
+
+      - name: Run Excel tests
+        run: |
+          powershell -ExecutionPolicy Bypass -File ${{ github.workspace }}/excel-testing_1.ps1
+        timeout-minutes: 1
