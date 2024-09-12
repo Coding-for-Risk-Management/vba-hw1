@@ -1,29 +1,40 @@
 <#
 .SYNOPSIS
-This script automates testing in Excel by running a VBA macro and checking the result.
+This script automates testing in Excel by running a specified VBA macro.
 
 .DESCRIPTION
 The script performs the following steps:
 1. Creates a new instance of Excel application.
 2. Opens the specified Excel file.
 3. Imports a VBA script into the Excel file.
-4. Runs a specified macro in the Excel file.
-6. Checks the result of the macro execution.
-7. Removes the imported VBA module.
-8. Closes the workbook and quits Excel application.
+4. Runs the specified macro in the Excel file.
+5. Removes the imported VBA module.
+6. Closes the workbook and quits Excel application.
 
 .PARAMETER FilePath
 The file path of the PowerShell script.
 
+.PARAMETER MacroName
+The name of the macro to be executed.
+
 .EXAMPLE
-.\excel-testing.ps1
-Runs the script to automate testing in Excel.
+.\excel-testing.ps1 -MacroName "test_PriceBond"
+Runs the script to automate testing in Excel for the specified macro.
 
 .NOTES
 - This script requires Excel to be installed on the system.
 - The file paths for the Excel file and VBA script should be provided.
-- The macro name and the expected result can be customized.
+- The macro name can be customized.
 #>
+
+param (
+    [string]$MacroName
+)
+
+if (-not $MacroName) {
+    Write-Host "Please provide a macro name to run using the -MacroName parameter."
+    exit 1
+}
 
 # Print the current directory
 Write-Host "Current Directory: $PSScriptRoot"
@@ -52,10 +63,6 @@ $workbook = $excel.Workbooks.Open($fullPath)
 # Disable Protected View
 $workbook.CheckCompatibility = $False
 
-# # Add a delay to let Excel finish loading
-# Write-Host "Waiting for Excel to load..."
-# Start-Sleep -Seconds 30
-
 Write-Host "Excel Ready: $($excel.Ready)"
 
 # Find a file that starts with "hw1" and ends with ".bas"
@@ -69,59 +76,34 @@ if ($files.Count -gt 0) {
     $module = $workbook.VBProject.VBComponents.Import($fullPath)
 } else {
     Write-Host "No file found that starts with 'hw1' and ends with '.bas'"
+    exit 1
 }
 
 $moduleName = $module.Name
 Write-Host "Module Name: $moduleName"
 
-# Define a list of macro names and their points
-$macros = @{
-    "test_PriceBond" = 3
-    "test_FizzBuzz" = 3
-    "test_MyMatMult" = 4
-}
+# Run the specified macro
+Write-Host "Running macro: $MacroName"
+try {
+    $result = $excel.Run($MacroName)
+    Write-Host "$MacroName result: $result"
 
-# Calculate the total maximum points
-$totalMaxPoints = 0
-foreach ($macro in $macros.GetEnumerator()) {
-    $totalMaxPoints += $macro.Value
-}
-
-# Initialize total points
-$totalPoints = 0
-
-# Loop through each macro in the hashtable
-foreach ($macro in $macros.GetEnumerator()) {
-    Write-Host "Running macro: $($macro.Name)"
-
-    try {
-        $result = $excel.Run($macro.Name)
-        Write-Host "$($macro.Name) $result"
-
-        # If the macro didn't fail, add its points to the total
-        if ($result -ne "FAIL") {
-            $totalPoints += $macro.Value
-            Write-Host "Points: $($macro.Value) of $($macro.Value)"
-        }
-        else {
-            Write-Host "Points: 0 of $($macro.Value)"
-        }
-    } catch {
-        Write-Host "Error running macro: $($macro.Name)"
+    if ($result -eq "FAIL") {
+        Write-Host "Macro failed."
+        exit 1
     }
+} catch {
+    Write-Host "Error running macro: $MacroName"
+    exit 1
 }
 
-Write-Host "TOTAL POINTS: $totalPoints"
-
-
+# Remove the VBA module after running the macro
 $workbook.VBProject.VBComponents.Remove($module)
 
+# Close the workbook and quit Excel
 $workbook.Close($False)
 $excel.Quit()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel)
 
-if ($totalPoints -lt $totalMaxPoints) {
-    exit 1
-} else {
-    exit 0
-}
+Write-Host "Macro executed successfully."
+exit 0
