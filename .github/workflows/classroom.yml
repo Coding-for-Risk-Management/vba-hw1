@@ -1,120 +1,100 @@
-<#
-.SYNOPSIS
-This script automates testing in Excel by running a specified VBA macro.
+name: win_excel_com_test
 
-.DESCRIPTION
-The script performs the following steps:
-1. Creates a new instance of Excel application.
-2. Opens the specified Excel file.
-3. Imports a VBA script into the Excel file.
-4. Runs the specified macro in the Excel file.
-5. Removes the imported VBA module.
-6. Closes the workbook and quits Excel application.
+on:
+  push:
+    branches:
+      - main
 
-.PARAMETER FilePath
-The file path of the PowerShell script.
+jobs:
+  run-tests:
+    runs-on: windows-latest
 
-.PARAMETER MacroName
-The name of the macro to be executed.
+    steps:
+      - name: Install Office
+        run: choco install office365business
 
-.EXAMPLE
-.\excel-testing.ps1 -MacroName "test_PriceBond"
-Runs the script to automate testing in Excel for the specified macro.
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-.NOTES
-- This script requires Excel to be installed on the system.
-- The file paths for the Excel file and VBA script should be provided.
-- The macro name can be customized.
-#>
+      - name: List files after checkout
+        run: |
+          powershell -Command "Get-ChildItem -Recurse | Select-Object -ExpandProperty FullName"
 
-param (
-    [string]$MacroName
-)
+      - name: Change directory to PowerShell directory
+        run: |
+          cd ${{ github.workspace }}
 
-if (-not $MacroName) {
-    Write-Host "Please provide a macro name to run using the -MacroName parameter."
-    exit 1
-}
+      - name: Run Excel tests and attribute points
+        id: run-tests
+        run: |
+          # Define points for each test
+          $points = @{
+              "test_PriceBond" = 3
+              "test_FizzBuzz" = 2
+              "test_MyMatMult" = 4
+          }
 
-# Print the current directory
-Write-Host "Current Directory: $PSScriptRoot"
+          # Initialize variables to hold total points and JSON result
+          $totalPoints = 0
+          $maxPoints = 0
+          $results = @()
 
-$excel = New-Object -ComObject Excel.Application
+          # Helper function to run test and attribute points
+          function Run-Test {
+              param (
+                  [string]$MacroName,
+                  [int]$Points
+              )
 
-New-ItemProperty -Path "HKCU:\Software\Microsoft\Office\$($excel.Version)\excel\Security" -Name AccessVBOM -Value 1 -Force | Out-Null
-New-ItemProperty -Path "HKCU:\Software\Microsoft\Office\$($excel.Version)\excel\Security" -Name VBAWarnings -Value 1 -Force | Out-Null
+              try {
+                  Write-Host "Running Excel test: $MacroName"
+                  $result = powershell -ExecutionPolicy Bypass -File ${{ github.workspace }}/excel-testing.ps1 -MacroName $MacroName
 
-$excel.Visible = $False # Set to $False to run in background
-$Excel.DisplayAlerts = $false
-$Excel.AskToUpdateLinks = $false
-$Excel.EnableEvents = $false
+                  if ($result -ne "FAIL") {
+                      $totalPoints += $Points
+                      $status = "PASS"
+                  } else {
+                      $status = "FAIL"
+                  }
 
-# Set security level to low to enable macros
-$excel.AutomationSecurity = 1
+                  # Append result to the output JSON array
+                  $results += @{
+                      "test" = $MacroName
+                      "points" = $Points
+                      "status" = $status
+                  }
+              } catch {
+                  Write-Host "Error running test: $MacroName"
+                  $results += @{
+                      "test" = $MacroName
+                      "points" = $Points
+                      "status" = "ERROR"
+                  }
+              }
 
-$currentDirectory = (Get-Location).Path
+              $maxPoints += $Points
+          }
 
-# Open Excel file
-$fileName = "C4RM_Class2_UnitTests.xlsm"
-$fullPath = Join-Path -Path $currentDirectory -ChildPath $fileName
-Write-Host "Opening Excel file: $fullPath"
-$workbook = $excel.Workbooks.Open($fullPath)
+          # Run tests with points
+          Run-Test -MacroName "test_PriceBond" -Points $points["test_PriceBond"]
+          Run-Test -MacroName "test_FizzBuzz" -Points $points["test_FizzBuzz"]
+          Run-Test -MacroName "test_MyMatMult" -Points $points["test_MyMatMult"]
 
-# Disable Protected View
-$workbook.CheckCompatibility = $False
+          # Create the JSON output that GitHub Classroom expects
+          $jsonOutput = @{
+              "totalPoints" = $totalPoints
+              "maxPoints" = $maxPoints
+              "tests" = $results
+          } | ConvertTo-Json -Compress
 
-Write-Host "Excel Ready: $($excel.Ready)"
+          # Output the JSON result
+          Write-Host "JSON Result: $jsonOutput"
 
-# Find a file that starts with "hw1" and ends with ".bas"
-$files = Get-ChildItem -Path $currentDirectory -Filter "hw1*.bas"
+          # Save the JSON result to a file
+          $jsonOutput | Out-File -FilePath ${{ github.workspace }}/results.json
 
-try {
-    # Check if any file found
-    if ($files.Count -gt 0) {
-        $vbaScriptFileName = $files[0].Name
-        $fullPath = Join-Path -Path $currentDirectory -ChildPath $vbaScriptFileName
-        Write-Host "Importing VBA script: $fullPath"
-        $module = $workbook.VBProject.VBComponents.Import($fullPath)
-    } else {
-        Write-Host "No file found that starts with 'hw1' and ends with '.bas'"
-        exit 1
-    }
-
-    $moduleName = $module.Name
-    Write-Host "Module Name: $moduleName"
-
-    # Run the specified macro
-    Write-Host "Running macro: $MacroName"
-    $result = $excel.Run($MacroName)
-    Write-Host "$MacroName result: $result"
-
-    if ($result -eq "FAIL") {
-        Write-Host "Macro failed."
-        exit 1
-    }
-
-} catch {
-    Write-Host "Error running macro: $MacroName"
-    exit 1
-
-} finally {
-    # Ensure that Excel closes even if an error occurs
-    if ($module) {
-        $workbook.VBProject.VBComponents.Remove($module)
-    }
-
-    # Close the workbook without saving changes and quit Excel
-    if ($workbook) {
-        $workbook.Close($False)
-    }
-
-    if ($excel) {
-        $excel.Quit()
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
-    }
-
-    Write-Host "Excel instance closed successfully."
-}
-
-Write-Host "Macro executed successfully."
-exit 0
+      - name: Upload results to GitHub Classroom
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: ${{ github.workspace }}/results.json

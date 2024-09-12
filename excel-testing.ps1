@@ -68,23 +68,23 @@ Write-Host "Excel Ready: $($excel.Ready)"
 # Find a file that starts with "hw1" and ends with ".bas"
 $files = Get-ChildItem -Path $currentDirectory -Filter "hw1*.bas"
 
-# Check if any file found
-if ($files.Count -gt 0) {
-    $vbaScriptFileName = $files[0].Name
-    $fullPath = Join-Path -Path $currentDirectory -ChildPath $vbaScriptFileName
-    Write-Host "Importing VBA script: $fullPath"
-    $module = $workbook.VBProject.VBComponents.Import($fullPath)
-} else {
-    Write-Host "No file found that starts with 'hw1' and ends with '.bas'"
-    exit 1
-}
-
-$moduleName = $module.Name
-Write-Host "Module Name: $moduleName"
-
-# Run the specified macro
-Write-Host "Running macro: $MacroName"
 try {
+    # Check if any file found
+    if ($files.Count -gt 0) {
+        $vbaScriptFileName = $files[0].Name
+        $fullPath = Join-Path -Path $currentDirectory -ChildPath $vbaScriptFileName
+        Write-Host "Importing VBA script: $fullPath"
+        $module = $workbook.VBProject.VBComponents.Import($fullPath)
+    } else {
+        Write-Host "No file found that starts with 'hw1' and ends with '.bas'"
+        exit 1
+    }
+
+    $moduleName = $module.Name
+    Write-Host "Module Name: $moduleName"
+
+    # Run the specified macro
+    Write-Host "Running macro: $MacroName"
     $result = $excel.Run($MacroName)
     Write-Host "$MacroName result: $result"
 
@@ -92,18 +92,29 @@ try {
         Write-Host "Macro failed."
         exit 1
     }
+
 } catch {
     Write-Host "Error running macro: $MacroName"
     exit 1
+
+} finally {
+    # Ensure that Excel closes even if an error occurs
+    if ($module) {
+        $workbook.VBProject.VBComponents.Remove($module)
+    }
+
+    # Close the workbook without saving changes and quit Excel
+    if ($workbook) {
+        $workbook.Close($False)
+    }
+
+    if ($excel) {
+        $excel.Quit()
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+    }
+
+    Write-Host "Excel instance closed successfully."
 }
-
-# Remove the VBA module after running the macro
-$workbook.VBProject.VBComponents.Remove($module)
-
-# Close the workbook and quit Excel
-$workbook.Close($False)
-$excel.Quit()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel)
 
 Write-Host "Macro executed successfully."
 exit 0
