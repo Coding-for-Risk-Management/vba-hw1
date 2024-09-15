@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "PriceBond Test",
+      "setup": "",
+      "run": "powershell -File excel-testing.ps1 -MacroName test_PriceBond",
+      "input": "",
+      "output": "",
+      "timeout": 120,
+      "points": 3
+    },
+    {
+      "name": "FizzBuzz Test",
+      "setup": "",
+      "run": "powershell -File excel-testing.ps1 -MacroName test_FizzBuzz",
+      "input": "",
+      "output": "",
+      "timeout": 120,
+      "points": 2
+    },
+    {
+      "name": "MyMatMult Test",
+      "setup": "",
+      "run": "powershell -File excel-testing.ps1 -MacroName test_MyMatMult",
+      "input": "",
+      "output": "",
+      "timeout": 120,
+      "points": 4
+    }
+  ]
+}
