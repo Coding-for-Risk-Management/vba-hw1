@@ -3,7 +3,7 @@
     {
       "name": "PriceBond Test",
       "setup": "",
-      "run": "powershell -File excel-testing.ps1 -MacroName test_PriceBond",
+      "run": "powershell -ExecutionPolicy Bypass -File excel-testing.ps1 -MacroName test_PriceBond",
       "input": "",
       "output": "",
       "timeout": 120,
@@ -12,7 +12,7 @@
     {
       "name": "FizzBuzz Test",
       "setup": "",
-      "run": "powershell -File excel-testing.ps1 -MacroName test_FizzBuzz",
+      "run": "powershell -ExecutionPolicy Bypass -File excel-testing.ps1 -MacroName test_FizzBuzz",
       "input": "",
       "output": "",
       "timeout": 120,
@@ -21,7 +21,7 @@
     {
       "name": "MyMatMult Test",
       "setup": "",
-      "run": "powershell -File excel-testing.ps1 -MacroName test_MyMatMult",
+      "run": "powershell -ExecutionPolicy Bypass -File excel-testing.ps1 -MacroName test_MyMatMult",
       "input": "",
       "output": "",
       "timeout": 120,

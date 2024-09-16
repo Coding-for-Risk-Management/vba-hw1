@@ -1,3 +1,5 @@
+# excel-testing.ps1
+
 param (
     [string]$MacroName
 )
@@ -15,7 +17,7 @@ $excel = New-Object -ComObject Excel.Application
 New-ItemProperty -Path "HKCU:\Software\Microsoft\Office\$($excel.Version)\Excel\Security" -Name AccessVBOM -Value 1 -Force | Out-Null
 New-ItemProperty -Path "HKCU:\Software\Microsoft\Office\$($excel.Version)\Excel\Security" -Name VBAWarnings -Value 1 -Force | Out-Null
 
-$excel.Visible = $False
+$excel.Visible = $False # Run in background
 $excel.DisplayAlerts = $false
 $excel.AskToUpdateLinks = $false
 $excel.EnableEvents = $false
@@ -41,7 +43,6 @@ try {
     # Find a file that starts with "hw1" and ends with ".bas"
     $files = Get-ChildItem -Path $currentDirectory -Filter "hw1*.bas"
 
-    # Check if any file found
     if ($files.Count -gt 0) {
         $vbaScriptFileName = $files[0].Name
         $vbaFullPath = Join-Path -Path $currentDirectory -ChildPath $vbaScriptFileName

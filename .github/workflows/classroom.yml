@@ -4,11 +4,17 @@ on: [push]
 
 permissions:
   contents: read
+  checks: write
+  issues: write
+  pull-requests: write
+  actions: write
 
 jobs:
   Autograding:
     runs-on: windows-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install Chocolatey
         shell: powershell
         run: |
@@ -20,8 +26,7 @@ jobs:
         shell: powershell
         run: choco install office365business -y
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Run Autograding
         uses: education/autograding@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
