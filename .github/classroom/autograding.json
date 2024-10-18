@@ -16,7 +16,7 @@
       "input": "",
       "output": "",
       "timeout": 120,
-      "points": 2
+      "points": 4
     },
     {
       "name": "MyMatMult Test",
@@ -25,7 +25,7 @@
       "input": "",
       "output": "",
       "timeout": 120,
-      "points": 4
+      "points": 3
     }
   ]
 }
