@@ -1,7 +1,8 @@
 # excel-testing.ps1
 
 param (
-    [string]$MacroName
+    [string]$MacroName,
+    [string]$BasFile
 )
 
 if (-not $MacroName) {
@@ -40,17 +41,27 @@ try {
 
     Write-Host "Excel Ready: $($excel.Ready)"
 
-    # Find a file that starts with "hw1" and ends with ".bas"
-    $files = Get-ChildItem -Path $currentDirectory -Filter "hw1*.bas"
-
-    if ($files.Count -gt 0) {
-        $vbaScriptFileName = $files[0].Name
-        $vbaFullPath = Join-Path -Path $currentDirectory -ChildPath $vbaScriptFileName
-        Write-Host "Importing VBA script: $vbaFullPath"
+    if ($BasFile) {
+        $vbaFullPath = Join-Path -Path $currentDirectory -ChildPath $BasFile
+        if (-Not (Test-Path $vbaFullPath)) {
+            Write-Host "Specified VBA file not found: $vbaFullPath"
+            exit 1
+        }
+        Write-Host "Importing specified VBA script: $vbaFullPath"
         $module = $workbook.VBProject.VBComponents.Import($vbaFullPath)
-    } else {
-        Write-Host "No file found that starts with 'hw1' and ends with '.bas'"
-        exit 1
+    }
+    else {
+        # Find a file that starts with "hw1" and ends with ".bas"
+        $files = Get-ChildItem -Path $currentDirectory -Filter "hw1*.bas"
+        if ($files.Count -gt 0) {
+            $vbaScriptFileName = $files[0].Name
+            $vbaFullPath = Join-Path -Path $currentDirectory -ChildPath $vbaScriptFileName
+            Write-Host "Importing VBA script: $vbaFullPath"
+            $module = $workbook.VBProject.VBComponents.Import($vbaFullPath)
+        } else {
+            Write-Host "No file found that starts with 'hw1' and ends with '.bas'"
+            exit 1
+        }
     }
 
     $moduleName = $module.Name
